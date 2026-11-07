@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inventory</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    .hidden { display: none; }
+    .error { color: #b00020; margin: 8px 0; }
+    input { margin: 4px; padding: 6px; }
+    table { border-collapse: collapse; margin-top: 16px; }
+    td, th { border: 1px solid #ccc; padding: 6px 12px; }
+  </style>
+</head>
+<body>
+  <section id="login-view" data-cy="login-view">
+    <h1>Login</h1>
+    <input data-cy="login-username" placeholder="Username" />
+    <input data-cy="login-password" type="password" placeholder="Password" />
+    <button data-cy="login-submit">Login</button>
+    <div class="error hidden" data-cy="login-error"></div>
+  </section>
+
+  <section id="inventory-view" data-cy="inventory-view" class="hidden">
+    <h1>Inventory</h1>
+    <button data-cy="logout-btn">Logout</button>
+
+    <h2>Add product</h2>
+    <input data-cy="product-name" placeholder="Name" />
+    <input data-cy="product-sku" placeholder="SKU" />
+    <input data-cy="product-price" placeholder="Price" />
+    <input data-cy="product-quantity" placeholder="Quantity" />
+    <button data-cy="product-save">Add</button>
+    <div class="error hidden" data-cy="product-error"></div>
+
+    <table data-cy="product-table">
+      <thead><tr><th>Name</th><th>SKU</th><th>Price</th><th>Qty</th><th></th></tr></thead>
+      <tbody data-cy="product-body"></tbody>
+    </table>
+  </section>
+
+  <script>
+    const $ = (name) => document.querySelector('[data-cy="' + name + '"]');
+
+    function showError(name, message) {
+      const el = $(name);
+      el.textContent = message;
+      el.classList.remove('hidden');
+    }
+    function clearError(name) {
+      const el = $(name);
+      el.textContent = '';
+      el.classList.add('hidden');
+    }
+
+    function showView() {
+      const loggedIn = sessionStorage.getItem('token') !== null;
+      $('login-view').classList.toggle('hidden', loggedIn);
+      $('inventory-view').classList.toggle('hidden', !loggedIn);
+      if (loggedIn) loadProducts();
+    }
+
+    async function login() {
+      clearError('login-error');
+      const username = $('login-username').value.trim();
+      const password = $('login-password').value;
+      if (!username || !password) {
+        return showError('login-error', 'Username and password are required');
+      }
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!res.ok) return showError('login-error', 'Invalid credentials');
+      const data = await res.json();
+      sessionStorage.setItem('token', data.token);
+      showView();
+    }
+
+    function logout() {
+      sessionStorage.removeItem('token');
+      showView();
+    }
+
+    async function loadProducts() {
+      const res = await fetch('/api/products');
+      const products = await res.json();
+      const body = $('product-body');
+      body.innerHTML = '';
+      products.forEach((p) => {
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-cy', 'product-row');
+        [p.name, p.sku, p.price, p.quantity].forEach((value) => {
+          const td = document.createElement('td');
+          td.textContent = value;
+          tr.appendChild(td);
+        });
+        const actions = document.createElement('td');
+        const del = document.createElement('button');
+        del.textContent = 'Delete';
+        del.setAttribute('data-cy', 'product-delete');
+        del.addEventListener('click', () => removeProduct(p.id));
+        actions.appendChild(del);
+        tr.appendChild(actions);
+        body.appendChild(tr);
+      });
+    }
+
+    async function addProduct() {
+      clearError('product-error');
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: $('product-name').value,
+          sku: $('product-sku').value,
+          price: $('product-price').value,
+          quantity: $('product-quantity').value,
+        }),
+      });
+      if (res.status === 400) return showError('product-error', 'Invalid product data');
+      if (res.status === 409) return showError('product-error', 'SKU already exists');
+      ['product-name', 'product-sku', 'product-price', 'product-quantity']
+        .forEach((n) => ($(n).value = ''));
+      loadProducts();
+    }
+
+    async function removeProduct(id) {
+      await fetch('/api/products/' + id, { method: 'DELETE' });
+      loadProducts();
+    }
+
+    $('login-submit').addEventListener('click', login);
+    $('logout-btn').addEventListener('click', logout);
+    $('product-save').addEventListener('click', addProduct);
+    showView();
+  </script>
+</body>
+</html>
