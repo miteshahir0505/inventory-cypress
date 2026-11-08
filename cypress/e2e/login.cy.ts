@@ -59,4 +59,21 @@ describe('Login suite', () => {
       expect(win.sessionStorage.getItem('token')).to.be.null;
     });
   });
+
+  it('returns to login after the token is removed and the page reloads', () => {
+    cy.get('[data-cy="login-username"]').type('admin');
+    cy.get('[data-cy="login-password"]').type('secret123');
+    cy.get('[data-cy="login-submit"]').click();
+    cy.get('[data-cy="inventory-view"]').should('be.visible');
+
+    cy.window().then((win) => {
+      win.sessionStorage.removeItem('token');
+    });
+
+    cy.reload();
+
+    cy.get('[data-cy="login-view"]').should('be.visible');
+    cy.get('[data-cy="inventory-view"]').should('not.be.visible');
+  });
+  
 });
