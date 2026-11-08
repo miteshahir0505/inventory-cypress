@@ -1,44 +1,59 @@
+const rows = () => cy.get('[data-cy="product-row"]');
+
 describe('Inventory', () => {
-    beforeEach(() => {
-        cy.request('POST', '/api/reset');
-        cy.login('admin', 'secret123');
-        cy.visit('/');
-    });
+  beforeEach(() => {
+    cy.request('POST', '/api/reset');
+    cy.login('admin', 'secret123');
+    cy.visit('/');
+  });
 
-    it('shows the three seed products', () => {
-        cy.get('[data-cy="product-row"]').should('have.length', 3);
-    });
+  it('shows the three seed products', () => {
+    rows().should('have.length', 3);
+  });
 
-    it('adds a new product', () => {
-        cy.get('[data-cy="product-name"]').type('Monitor');
-        cy.get('[data-cy="product-sku"]').type('MON-001');
-        cy.get('[data-cy="product-price"]').type('100');
-        cy.get('[data-cy="product-quantity"]').type('10');
-        cy.get('[data-cy="product-save"]').click();
-        cy.get('[data-cy="product-row"]').should('have.length', 4);
-        cy.contains('[data-cy="product-row"]', 'Monitor').should('be.visible');
+  it('shows every product the API returns', () => {
+    cy.request('GET', '/api/products').its('body.length').then((count) => {
+      rows().should('have.length', count);
     });
+  });
 
-    it('deletes a product', () => {
-        cy.get('[data-cy="product-delete"]').first().click();
-        cy.get('[data-cy="product-row"]').should('have.length', 2);
-        cy.contains('[data-cy="product-row"]', 'Laptop').should('not.exist');
+  it('adds a new product', () => {
+    rows().its('length').then((before) => {
+      cy.get('[data-cy="product-name"]').type('Monitor');
+      cy.get('[data-cy="product-sku"]').type('MON-001');
+      cy.get('[data-cy="product-price"]').type('100');
+      cy.get('[data-cy="product-quantity"]').type('10');
+      cy.get('[data-cy="product-save"]').click();
+      rows().should('have.length', before + 1);
+      cy.contains('[data-cy="product-row"]', 'Monitor').should('be.visible');
     });
+  });
 
-    it('shows an error when required fields are empty', () => {
-        cy.get('[data-cy="product-save"]').click();
-        cy.get('[data-cy="product-error"]').should('contain', 'Invalid product data');
-        cy.get('[data-cy="product-row"]').should('have.length', 3);
+  it('deletes a product', () => {
+    rows().its('length').then((before) => {
+      cy.get('[data-cy="product-delete"]').first().click();
+      rows().should('have.length', before - 1);
+      cy.contains('[data-cy="product-row"]', 'Laptop').should('not.exist');
     });
+  });
 
-    it('rejects a duplicate SKU', () => {
-        cy.get('[data-cy="product-name"]').type('Another Laptop');
-        cy.get('[data-cy="product-sku"]').type('LAP-001');
-        cy.get('[data-cy="product-price"]').type('500');
-        cy.get('[data-cy="product-quantity"]').type('2');
-        cy.get('[data-cy="product-save"]').click();
-        cy.get('[data-cy="product-error"]').should('contain', 'SKU already exists');
-        cy.get('[data-cy="product-row"]').should('have.length', 3);
+  it('shows an error when required fields are empty', () => {
+    rows().its('length').then((before) => {
+      cy.get('[data-cy="product-save"]').click();
+      cy.get('[data-cy="product-error"]').should('contain', 'Invalid product data');
+      rows().should('have.length', before);
     });
+  });
 
+  it('rejects a duplicate SKU', () => {
+    rows().its('length').then((before) => {
+      cy.get('[data-cy="product-name"]').type('Another Laptop');
+      cy.get('[data-cy="product-sku"]').type('LAP-001');
+      cy.get('[data-cy="product-price"]').type('500');
+      cy.get('[data-cy="product-quantity"]').type('2');
+      cy.get('[data-cy="product-save"]').click();
+      cy.get('[data-cy="product-error"]').should('contain', 'SKU already exists');
+      rows().should('have.length', before);
+    });
+  });
 });

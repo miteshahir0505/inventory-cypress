@@ -7,8 +7,10 @@ describe('Products network', () => {
   it('loads products from the API', () => {
     cy.intercept('GET', '/api/products').as('getProducts');
     cy.visit('/');
-    cy.wait('@getProducts').its('response.statusCode').should('eq', 200);
-    cy.get('[data-cy="product-row"]').should('have.length', 3);
+    cy.wait('@getProducts').then(({ response }) => {
+      expect(response?.statusCode).to.eq(200);
+      cy.get('[data-cy="product-row"]').should('have.length', response?.body.length);
+    });
   });
 
   it('sends the right request when adding a product', () => {
@@ -24,6 +26,23 @@ describe('Products network', () => {
       expect(request.body).to.deep.include({ name: 'Monitor', sku: 'MON-001' });
       expect(response?.statusCode).to.eq(201);
       expect(response?.body).to.have.property('id');
+    });
+  });
+
+  it('shows no rows when the API returns an empty list', () => {
+    cy.intercept('GET', '/api/products', { body: [] }).as('getProducts');
+    cy.visit('/');
+    cy.wait('@getProducts');
+    cy.get('[data-cy="product-row"]').should('not.exist');
+  });
+
+  it('renders products from a fixture', () => {
+    cy.fixture('products.json').then((products: { name: string }[]) => {
+      cy.intercept('GET', '/api/products', { body: products }).as('getProducts');
+      cy.visit('/');
+      cy.wait('@getProducts');
+      cy.get('[data-cy="product-row"]').should('have.length', products.length);
+      cy.contains('[data-cy="product-row"]', products[0].name).should('be.visible');
     });
   });
 });

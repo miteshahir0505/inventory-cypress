@@ -1,0 +1,4 @@
+[
+  { "id": 101, "name": "Webcam", "sku": "WEB-001", "price": 60, "quantity": 7 },
+  { "id": 102, "name": "Headset", "sku": "HEA-001", "price": 45, "quantity": 12 }
+]
