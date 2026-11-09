@@ -40,7 +40,6 @@ describe('Inventory', () => {
     it('shows an error when required fields are empty', () => {
         rows().its('length').then((before) => {
             cy.get('[data-cy="product-save"]').click();
-            // CHANGE 1: added be.visible
             cy.get('[data-cy="product-error"]')
                 .should('be.visible')
                 .and('contain', 'Invalid product data');
@@ -55,7 +54,6 @@ describe('Inventory', () => {
             cy.get('[data-cy="product-price"]').type('500');
             cy.get('[data-cy="product-quantity"]').type('2');
             cy.get('[data-cy="product-save"]').click();
-            // CHANGE 1: added be.visible
             cy.get('[data-cy="product-error"]')
                 .should('be.visible')
                 .and('contain', 'SKU already exists');
@@ -63,16 +61,21 @@ describe('Inventory', () => {
         });
     });
 
-    // CHANGE 2: new loop, one test per invalid price
-    const invalidPrices = ['-10'];
+    // CHANGE: replaces the invalidPrices block. Now covers price and quantity.
+    const invalidCases: { label: string; price: string; quantity: string }[] = [
+        { label: 'price -10', price: '-10', quantity: '5' },
+        { label: 'price abc', price: 'abc', quantity: '5' },
+        { label: 'quantity -1', price: '10', quantity: '-1' },
+        { label: 'quantity abc', price: '10', quantity: 'abc' },
+    ];
 
-    invalidPrices.forEach((price) => {
-        it(`rejects price "${price}"`, () => {
+    invalidCases.forEach(({ label, price, quantity }) => {
+        it(`rejects ${label}`, () => {
             rows().its('length').then((before) => {
                 cy.get('[data-cy="product-name"]').type('Test item');
                 cy.get('[data-cy="product-sku"]').type('TST-001');
                 cy.get('[data-cy="product-price"]').type(price);
-                cy.get('[data-cy="product-quantity"]').type('5');
+                cy.get('[data-cy="product-quantity"]').type(quantity);
                 cy.get('[data-cy="product-save"]').click();
 
                 cy.get('[data-cy="product-error"]')
