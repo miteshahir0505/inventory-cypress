@@ -85,4 +85,23 @@ describe('Inventory', () => {
             });
         });
     });
+
+   it('shows HTML in a product name as literal text', () => {
+    const payload = '<b>bold</b>';
+
+    cy.get('[data-cy="product-name"]').type(payload);
+    cy.get('[data-cy="product-sku"]').type('XSS-001');
+    cy.get('[data-cy="product-price"]').type('10');
+    cy.get('[data-cy="product-quantity"]').type('1');
+    cy.get('[data-cy="product-save"]').click();
+
+    // CHANGE: find('b') instead of find('[data-cy="product-name"]')
+    cy.contains('[data-cy="product-row"]', 'XSS-001')
+        .find('b')
+        .should('not.exist');
+
+    // CHANGE: assert on the row itself, not a child selector
+    cy.contains('[data-cy="product-row"]', 'XSS-001')
+        .should('contain', payload);
+});
 });
