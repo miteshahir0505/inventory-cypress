@@ -19,11 +19,7 @@ describe('Inventory', () => {
 
     it('adds a new product', () => {
         rows().its('length').then((before) => {
-            cy.get('[data-cy="product-name"]').type('Monitor');
-            cy.get('[data-cy="product-sku"]').type('MON-001');
-            cy.get('[data-cy="product-price"]').type('100');
-            cy.get('[data-cy="product-quantity"]').type('10');
-            cy.get('[data-cy="product-save"]').click();
+            cy.addProduct({ name: 'Monitor', sku: 'MON-001', price: 100, quantity: 10 });
             rows().should('have.length', before + 1);
             cy.contains('[data-cy="product-row"]', 'Monitor').should('be.visible');
         });
