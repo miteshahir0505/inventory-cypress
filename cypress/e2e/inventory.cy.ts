@@ -45,11 +45,7 @@ describe('Inventory', () => {
 
     it('rejects a duplicate SKU', () => {
         rows().its('length').then((before) => {
-            cy.get('[data-cy="product-name"]').type('Another Laptop');
-            cy.get('[data-cy="product-sku"]').type('LAP-001');
-            cy.get('[data-cy="product-price"]').type('500');
-            cy.get('[data-cy="product-quantity"]').type('2');
-            cy.get('[data-cy="product-save"]').click();
+            cy.addProduct({ name: 'Another Laptop', sku: 'LAP-001', price: 500, quantity: 2 });
             cy.get('[data-cy="product-error"]')
                 .should('be.visible')
                 .and('contain', 'SKU already exists');
@@ -57,7 +53,6 @@ describe('Inventory', () => {
         });
     });
 
-    // CHANGE: replaces the invalidPrices block. Now covers price and quantity.
     const invalidCases: { label: string; price: string; quantity: string }[] = [
         { label: 'price -10', price: '-10', quantity: '5' },
         { label: 'price abc', price: 'abc', quantity: '5' },
@@ -68,12 +63,7 @@ describe('Inventory', () => {
     invalidCases.forEach(({ label, price, quantity }) => {
         it(`rejects ${label}`, () => {
             rows().its('length').then((before) => {
-                cy.get('[data-cy="product-name"]').type('Test item');
-                cy.get('[data-cy="product-sku"]').type('TST-001');
-                cy.get('[data-cy="product-price"]').type(price);
-                cy.get('[data-cy="product-quantity"]').type(quantity);
-                cy.get('[data-cy="product-save"]').click();
-
+                cy.addProduct({ name: 'Test item', sku: 'TST-001', price, quantity });
                 cy.get('[data-cy="product-error"]')
                     .should('be.visible')
                     .and('contain', 'Invalid product data');
@@ -82,40 +72,28 @@ describe('Inventory', () => {
         });
     });
 
-   it('shows HTML in a product name as literal text', () => {
-    const payload = '<b>bold</b>';
+    it('shows HTML in a product name as literal text', () => {
+        const payload = '<b>bold</b>';
+        cy.addProduct({ name: payload, sku: 'XSS-001', price: 10, quantity: 1 });
 
-    cy.get('[data-cy="product-name"]').type(payload);
-    cy.get('[data-cy="product-sku"]').type('XSS-001');
-    cy.get('[data-cy="product-price"]').type('10');
-    cy.get('[data-cy="product-quantity"]').type('1');
-    cy.get('[data-cy="product-save"]').click();
+        cy.contains('[data-cy="product-row"]', 'XSS-001')
+            .find('b')
+            .should('not.exist');
 
-    // CHANGE: find('b') instead of find('[data-cy="product-name"]')
-    cy.contains('[data-cy="product-row"]', 'XSS-001')
-        .find('b')
-        .should('not.exist');
-
-    // CHANGE: assert on the row itself, not a child selector
-    cy.contains('[data-cy="product-row"]', 'XSS-001')
-        .should('contain', payload);
-});
-
-it.skip('shows an error when the server fails to save a product', () => {
-    cy.intercept('POST', '/api/products', { statusCode: 500, body: { error: 'Server error' } }).as('saveProduct');
-
-    rows().its('length').then((before) => {
-        cy.get('[data-cy="product-name"]').type('Monitor');
-        cy.get('[data-cy="product-sku"]').type('MON-001');
-        cy.get('[data-cy="product-price"]').type('100');
-        cy.get('[data-cy="product-quantity"]').type('10');
-        cy.get('[data-cy="product-save"]').click();
-
-        cy.wait('@saveProduct').its('response.statusCode').should('eq', 500);
-
-        rows().should('have.length', before);
-        cy.get('[data-cy="product-error"]').should('be.visible');
+        cy.contains('[data-cy="product-row"]', 'XSS-001')
+            .should('contain', payload);
     });
-});
+
+    it.skip('shows an error when the server fails to save a product', () => {
+        cy.intercept('POST', '/api/products', { statusCode: 500, body: { error: 'Server error' } }).as('saveProduct');
+
+        rows().its('length').then((before) => {
+            cy.addProduct({ name: 'Monitor', sku: 'MON-001', price: 100, quantity: 10 });
+            cy.wait('@saveProduct').its('response.statusCode').should('eq', 500);
+
+            rows().should('have.length', before);
+            cy.get('[data-cy="product-error"]').should('be.visible');
+        });
+    });
 
 });
