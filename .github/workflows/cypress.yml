@@ -24,14 +24,18 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Start app
+        run: nohup npm run start:app > app.log 2>&1 &
+
+      - name: Wait for app
+        run: curl --retry 20 --retry-delay 1 --retry-connrefused --fail http://127.0.0.1:3000/
+
       - name: Run Cypress
-        uses: cypress-io/github-action@v6
-        with:
-          install: false
-          start: npm run start:app
-          wait-on: 'http://127.0.0.1:3000'
-          wait-on-timeout: 60
-          browser: chrome
+        run: npx cypress run --browser chrome
+
+      - name: Show app log
+        if: failure()
+        run: cat app.log
 
       - name: Upload screenshots
         if: failure()
